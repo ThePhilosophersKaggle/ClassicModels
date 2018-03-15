@@ -75,7 +75,7 @@ class NlpModels:
             self.y_test = to_categorical(self.y_test)
             # ToDo: Check if y_train and y_test have the same classes
 
-    def NLP_cnn_lstm_pretrained_embeddings(self, loss, optimizer, batch_size,
+    def nlp_cnn_lstm_pretrained_embeddings(self, loss, optimizer, batch_size,
                                                  nb_epochs, embeddings_source, path_to_embeddings, vector_dim,
                                                  save_model_as="cnn_lstm_pretrained", shuffle=True):
         """
@@ -190,6 +190,26 @@ class NlpModels:
         elif self.task == "regression":
             print("Mean absolute error: ", mean_absolute_error(self.y_test, y_pred))
             print("explained variance score: ", explained_variance_score(self.y_test, y_pred))
+
+    def test_on_new_data(self, x_test, y_test, mapping_function=None, target_names=None):
+        """
+
+        :param x_test: list of strings
+        :param y_test: corresponding value (label...). Raw vector (e.g. [0, 1, 0, 2 ...]
+        :param mapping_function: function to be applied on the prediction.
+        :param target_names: if classification problem these will be the names of the classes.
+        :return: prints classical metrics.
+        """
+        if mapping_function is not None:
+            y_pred = mapping_function(self.predict(x_test))
+        else:
+            y_pred = self.predict(x_test)
+        if self.task == "classification":
+            print(classification_report(y_test, y_pred, target_names=target_names))
+        elif self.task == "regression":
+            print("Mean absolute error: ", mean_absolute_error(y_test, y_pred))
+            print("explained variance score: ", explained_variance_score(y_test, y_pred))
+
 
 def load_glove_embeddings(path, embedding_dim, word_index):
     """
