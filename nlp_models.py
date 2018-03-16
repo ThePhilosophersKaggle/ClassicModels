@@ -186,7 +186,7 @@ class NlpModels:
         else:
             y_pred = self.predict(self.x_test)
         if self.task == "classification":
-            print(classification_report(self.y_test.sum(axis=1), y_pred, target_names=target_names))
+            print(classification_report(np.argmax(self.y_test.values, axis=1), y_pred, target_names=target_names))
         elif self.task == "regression":
             print("Mean absolute error: ", mean_absolute_error(self.y_test, y_pred))
             print("explained variance score: ", explained_variance_score(self.y_test, y_pred))
