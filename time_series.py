@@ -26,21 +26,23 @@ class TimeSeriesModels:
         scaler = MinMaxScaler(feature_range=(0, 1))
         self.scaler = scaler
         data = scaler.fit_transform(data)
-        # Put the problem as a supervise problem (matrix with t1, t2, t3 ; t2, t3, t4 ; ...)
+        # Map the series to a supervised problem (values for days 1-n with regressors for these days to predict days
+        # n + 1 ... n + k
         x, y = timeseries_to_supervised(data, look_back=look_back, look_forward=look_forward)
         # Split train and test
         self.x_train, self.y_train = x[:train_size], y[:train_size]
         self.x_test, self.y_test = x[train_size:], y[train_size:]
         # Check Regressors exist
         if regressors is not None:
+            # Reshape data to add a 3rd dimension for regressors (=> order 2 tensor)
             self.x_train = self.x_train.reshape([self.x_train.shape[0], self.x_train.shape[1], 1])
             self.x_test = self.x_test.reshape([self.x_test.shape[0], self.x_test.shape[1], 1])
-            # self.y_train = self.y_train.reshape([self.y_train.shape[0], self.y_train.shape[1], 1])
-            # self.y_test = self.y_test.reshape([self.y_test.shape[0], self.y_test.shape[1], 1])
+            # Initialize the regressor layers to be stacked on to the 3rd dimension of the data matrix
             reg_x_train = np.zeros([self.x_train.shape[0], self.x_train.shape[1], len(regressors)])
             reg_x_test = np.zeros([self.x_test.shape[0], self.x_test.shape[1], len(regressors)])
-            # reg_y_train = np.zeros([self.y_train.shape[0], self.y_train.shape[1], len(regressors)])
-            # reg_y_test = np.zeros([self.y_test.shape[0], self.y_test.shape[1], len(regressors)])
+            # x_train dans x_test are matrixes resulting from the mapping to a supervised learning problem.
+            # As the regressors are still a series, they have to be reshaped to match the supervised problem created
+            # above
             for i in range(len(regressors)):
                 reg_x_tmp, reg_y_tmp = timeseries_to_supervised(
                     pd.DataFrame(index=pandas_dataframe[dates_column].values,
@@ -49,10 +51,9 @@ class TimeSeriesModels:
                 # Split train and test
                 reg_x_train[:, :, i] = reg_x_tmp[:train_size]
                 reg_x_test[:, :, i] = reg_x_tmp[train_size:]
+            # Append the regressors to the data shaped for supervised learning
             self.x_train = np.append(self.x_train, reg_x_train, axis=2)
             self.x_test = np.append(self.x_test, reg_x_test, axis=2)
-            # self.y_train = np.append(self.y_train, reg_y_train, axis=2)
-            # self.y_test = np.append(self.y_test, reg_y_test, axis=2)
         # Set last attributes
         self.seed = seed
         self.look_back = look_back
@@ -74,10 +75,6 @@ class TimeSeriesModels:
             if i % int(nb_epochs/10) == 0:
                 print("computation at: ", int(100*i/nb_epochs), "%")
         self.model = model
-        #self.history = history
-        #self.scaler = scaler
-        #self.x_train_scaled = train_scaled
-        #self.x_test_scaled = test_scaled
 
     def lstm_reg(self, neurons, nb_epochs, verbose=0):
         #scaler, train_scaled, test_scaled = scale(self.x_train, self.x_test)
@@ -94,10 +91,6 @@ class TimeSeriesModels:
             if i % int(nb_epochs/10) == 0:
                 print("computation at: ", int(100*i/nb_epochs), "%")
         self.model = model
-        #self.history = history
-        #self.scaler = scaler
-        #self.x_train_scaled = train_scaled
-        #self.x_test_scaled = test_scaled
 
     def evaluate(self):
         # Predict training
@@ -110,23 +103,6 @@ class TimeSeriesModels:
         yhat_train = self.scaler.inverse_transform(trainPredict)
         yhat_test = self.scaler.inverse_transform(testPredict)
         return yhat_train, yhat_test
-
-def create_dataset(dataset, look_back=1, look_forward=1):
-    """
-
-    convert an array of values into a dataset matrix
-    :param dataset: time series as a pandas series.
-    :param look_back: how many data points to use to predict the next ones.
-    :param look_forward: how many data points to predict.
-    :return: x, y : x is the data points to use to predict, y is the true corresponding ediction.
-    """
-    x, y = [], []
-    for i in range(len(dataset)-look_back - look_forward):
-        a = dataset[i: i+look_back]
-        x.append(a)
-        y.append(dataset[i + look_back: i + look_back + look_forward - 1])
-    print(x)
-    return np.array(x), np.array(y)
 
 
 # frame a sequence as a supervised learning problem
