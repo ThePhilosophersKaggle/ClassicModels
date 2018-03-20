@@ -12,13 +12,16 @@ from keras.models import Sequential
 from keras.layers import LSTM
 from keras.layers import Dense
 from sklearn.preprocessing import MinMaxScaler
+from keras.layers import Reshape
+from keras.layers import Merge
+from keras.layers import Concatenate
 import math
 from sklearn.metrics import mean_squared_error
 from keras import backend
 
 class TimeSeriesModels:
-    def __init__(self, pandas_dataframe, dates_column, target_column, regressors=None, train_test_split=0.66, seed=7, look_back=1,
-                 look_forward=1):
+    def __init__(self, pandas_dataframe, dates_column, target_column, regressors=None, train_test_split=0.66, seed=7,
+                 look_back=1, look_forward=1):
         data = pd.DataFrame(index=pandas_dataframe[dates_column].values, data=pandas_dataframe[target_column].values)
         # Calculate the training set size
         train_size = int(len(data)*train_test_split)
@@ -61,7 +64,7 @@ class TimeSeriesModels:
         self.regressors = regressors
 
     def lstm(self, neurons, nb_epochs, verbose=0):
-        #scaler, train_scaled, test_scaled = scale(self.x_train, self.x_test)
+        # scaler, train_scaled, test_scaled = scale(self.x_train, self.x_test)
         x_train = self.x_train.reshape(self.x_train.shape[0], 1, self.look_back + 1)
         model = Sequential()
         model.add(LSTM(neurons, batch_input_shape=(1, x_train.shape[1], x_train.shape[2]), stateful=True))
@@ -77,14 +80,14 @@ class TimeSeriesModels:
         self.model = model
 
     def lstm_reg(self, neurons, nb_epochs, verbose=0):
-        #scaler, train_scaled, test_scaled = scale(self.x_train, self.x_test)
+        # scaler, train_scaled, test_scaled = scale(self.x_train, self.x_test)
         x_train = self.x_train.reshape(self.x_train.shape[0], len(self.regressors) + 1, self.look_back + 1)
         model = Sequential()
         model.add(LSTM(neurons, batch_input_shape=(1, x_train.shape[1], x_train.shape[2]), stateful=True))
         model.add(Dense(self.look_forward))
         model.compile(loss='mean_squared_error', optimizer='adam')
         print(model.summary())
-        #history = []
+        # history = []
         for i in range(nb_epochs):
             model.fit(x_train, self.y_train, epochs=1, batch_size=1, verbose=verbose, shuffle=False)
             model.reset_states()
@@ -104,6 +107,40 @@ class TimeSeriesModels:
         yhat_test = self.scaler.inverse_transform(testPredict)
         return yhat_train, yhat_test
 
+    def lstm_reg_test(self, neurons, nb_epochs, verbose=0, dropout=0, recurrent_dropout=0):
+        # scaler, train_scaled, test_scaled = scale(self.x_train, self.x_test)
+        x_train = self.x_train.reshape(self.x_train.shape[0], len(self.regressors) + 1, self.look_back + 1)
+        x_train_autoreg = np.reshape(x_train[:, :, 0], (x_train.shape[0], x_train.shape[1], 1))
+        model_autoreg = Sequential()
+        model_autoreg.add(LSTM(neurons, dropout=dropout,
+                               recurrent_dropout=recurrent_dropout,
+                               batch_input_shape=(1, x_train.shape[1], 1)
+                               , stateful=True))
+        # Add regressors
+        model_reg = Sequential()
+        model_reg.add(Dense(units=neurons, batch_input_shape=(1, x_train.shape[1],
+                                                              x_train.shape[2] - 1)))
+        model_reg.add(Dense(neurons))
+        model_reg.add(Reshape(((len(self.regressors) + 1)*neurons,), input_shape=(1, len(self.regressors) + 1,
+                                                                                  neurons)))
+        model_reg.add(Dense(neurons))
+        # model_reg.add(Reshape(target_shape=(3,), input_shape=(1, 1, 3)))
+        # Merge
+        model = Sequential()
+        # model.add(Merge([model_autoreg, model_reg], mode='sum'))
+        model.add(Concatenate([model_autoreg, model_reg], input_shape=(1, neurons)))
+        model.add(LSTM(1))
+        model.add(Dense(1, activation='softmax'))
+        model.compile(loss='mean_squared_error', optimizer='adam')
+        print(model.summary())
+        # history = []
+        for i in range(nb_epochs):
+            model.fit([x_train_autoreg, x_train[:, :, 1:]], self.y_train, epochs=1, batch_size=1, verbose=verbose,
+                      shuffle=False)
+            model.reset_states()
+            if i % int(nb_epochs / 10) == 0:
+                print("computation at: ", int(100 * i / nb_epochs), "%")
+        self.model = model
 
 # frame a sequence as a supervised learning problem
 def timeseries_to_supervised(data, look_back=1, look_forward=1):

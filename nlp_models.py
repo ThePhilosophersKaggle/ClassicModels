@@ -171,13 +171,13 @@ class NlpModels:
         """
         print_keras_training_history(self.history)
 
-    def evaluate(self, mapping_function=None, target_names=None):
+    def evaluate(self, target_names=None, mapping_function=None):
         """
         Evaluates the model using classic metrics (classification report from scikit learn if classification problem).
 
-        :param mapping_function: fucntion that will be applied for prediction. For example in a classification problem
-            classes are 1 - 5, taking the argmax of a prediction will give 1-4, so you would want to apply
-            mapping_function = lambda x: x + 1.
+        :param mapping_function: function to apply to the prediction. In theory this should not be useful as (in
+            classification tasks) this method will compare the prediction to the argmax of the categorized vector.
+            Kept just in case it could be required.
         :param target_names: if a classification task these will be the names of the classes.
         :return: prints the classification report.
         """
@@ -195,8 +195,10 @@ class NlpModels:
         """
 
         :param x_test: list of strings
-        :param y_test: corresponding value (label...). Raw vector (e.g. [0, 1, 0, 2 ...]
-        :param mapping_function: function to be applied on the prediction.
+        :param y_test: corresponding value (label...). Raw vector (e.g. [0, 1, 0, 2 ...] )
+        :param mapping_function: fucntion that will be applied for prediction. For example in a classification problem
+            classes are 1 - 5, taking the argmax of a prediction will give 1-4, so you would want to apply
+            mapping_function = lambda x: x + 1.
         :param target_names: if classification problem these will be the names of the classes.
         :return: prints classical metrics.
         """
@@ -285,7 +287,7 @@ def tokenize(train, top_words, max_len, test=None):
     :param top_words:
     :param max_len: length of a sequence (i.e. len(train[i]).
     :param test: list of strings, default is None.
-    :return: tokenizer, processed train data, processed test data
+    :return: tokenizer, processed train data (array of integers from tokenizer.texts_to_sequences), processed test data
     """
     tokenizer = Tokenizer(num_words=top_words)
     tokenizer.fit_on_texts(train)
