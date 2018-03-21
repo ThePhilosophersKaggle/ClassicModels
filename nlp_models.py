@@ -107,7 +107,6 @@ class NlpModels:
             embeddings = load_fasttext_embeddings(path=path_to_embeddings,
                                                   embedding_dim=vector_dim, word_index=self.tokenizer.word_index,
                                                   max_words=None)
-
         elif embeddings_source == "glove":
             embeddings = load_glove_embeddings(path=path_to_embeddings,
                                                embedding_dim=vector_dim, word_index=self.tokenizer.word_index)
