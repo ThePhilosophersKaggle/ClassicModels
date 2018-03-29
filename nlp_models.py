@@ -27,11 +27,13 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import explained_variance_score
 from sklearn.metrics import mean_absolute_error
 import pickle
+import os
+from keras.models import load_model
 
 
 class NlpModels:
     def __init__(self, x_train, y_train, task, x_test=None, y_test=None, test_size=None, random_state=42, shuffle=True,
-                 top_words=100000, max_len=200):
+                 top_words=100000, max_len=200, bypass_to_categorical=False):
         """
 
         :param x_train: training text data (list, numpy array, pandas df values)
@@ -70,7 +72,7 @@ class NlpModels:
         self.top_words = top_words
         self.task = task
         # Format the labels according to the the task
-        if task == "classification":
+        if task == "classification" and not bypass_to_categorical:
             self.y_train = to_categorical(self.y_train)
             self.y_test = to_categorical(self.y_test)
             # ToDo: Check if y_train and y_test have the same classes
@@ -211,6 +213,18 @@ class NlpModels:
             print("Mean absolute error: ", mean_absolute_error(y_test, y_pred))
             print("explained variance score: ", explained_variance_score(y_test, y_pred))
 
+    def save(self, folder_path):
+        """
+        Extension will be ".nlp"
+        :param name: name of the file (without extension)
+        :param delete_train_data: if True training data will not be saved
+        :return:
+        """
+        os.makedirs(folder_path)
+        params = {"task": self.task, "top_words": self.top_words, "max_len": self.max_len}
+        pickle.dump(params, open(folder_path + r"\params.p", "wb"))
+        pickle.dump(self.tokenizer, open(folder_path + r"\tokenizer.p", "wb"))
+        self.model.save(folder_path + r"\model.hdf5")
 
 def load_glove_embeddings(path, embedding_dim, word_index):
     """
@@ -296,3 +310,12 @@ def tokenize(train, top_words, max_len, test=None):
         return tokenizer, pad_sequences(train_sequences, maxlen=max_len), pad_sequences(test_sequences, maxlen=max_len)
     else:
         return tokenizer, pad_sequences(train_sequences, maxlen=max_len)
+
+
+def load(folder_path):
+    params = pickle.load(open(folder_path + r"\params.p", "rb"))
+    mod = NlpModels(x_train=[], y_train=[], x_test=[], y_test=[], task=params["task"],
+                    top_words=params["top_words"], max_len=params["max_len"], bypass_to_categorical=True)
+    mod.tokenizer = pickle.load(open(folder_path + r"\tokenizer.p", "rb"))
+    mod.model = load_model(folder_path + r"\model.hdf5")
+    return mod
