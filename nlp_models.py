@@ -315,7 +315,7 @@ def tokenize(train, top_words, max_len, test=None):
 def load(folder_path):
     """
     Loads an NlpModels object saved in folder_path. The folder should contain 3 files: model.hdf5, params.p and
-        tokenizer.p.
+tokenizer.p.
 
     :param folder_path: name of the folder containing the elements of the model.
     :return: NlpModels object ready to use.
