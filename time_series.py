@@ -6,11 +6,13 @@ Wrapper module for time series deep learning using Keras.
 """
 import numpy as np
 import pandas as pd
+from classic_models import *
 from keras.models import Sequential
 from keras.layers import LSTM
 from keras.layers import Dense
 from sklearn.preprocessing import MinMaxScaler
 from keras.layers import Reshape
+from keras.layers import Dropout
 from keras.layers import Merge
 from keras.layers import Concatenate
 from matplotlib import pyplot as plt
@@ -137,16 +139,30 @@ class TimeSeriesModels:
         print(x_train_autoreg.shape)
         # Evaluate time series
         time = Input(batch_shape=(1, x_train.shape[1], 1))
-        time_lstm = LSTM(neurons, dropout=dropout, recurrent_dropout=recurrent_dropout, stateful=True)(time)
+        time_lstm = LSTM(neurons, dropout=dropout, recurrent_dropout=recurrent_dropout, stateful=True,
+                         return_sequences=True)(time)
+        time_lstm = LSTM(neurons, dropout=dropout, recurrent_dropout=recurrent_dropout, stateful=True,
+                         return_sequences=True)(time_lstm)
+        time_lstm = LSTM(neurons, dropout=dropout, recurrent_dropout=recurrent_dropout, stateful=True,
+                         return_sequences=False)(time_lstm)
 
         # Take regressors into account
         regressor_processing = Input(batch_shape=(1, x_train.shape[1], x_train.shape[2] - 1))
         regressor_processing_layers = Reshape((x_train.shape[1]*(x_train.shape[2] - 1),))(regressor_processing)
+        regressor_processing_layers = Dense((x_train.shape[1]*(x_train.shape[2] - 1)),
+                                            activation="softmax")(regressor_processing_layers)
+        regressor_processing_layers = Dropout(0.2)(regressor_processing_layers)
         regressor_processing_layers = Dense(neurons, activation="sigmoid")(regressor_processing_layers)
 
         # merge
         merge = concatenate([time_lstm, regressor_processing_layers])
-        merge = Dense(1, activation="relu")(merge)
+        merge = Dense(50, activation="relu")(merge)
+        merge = Dropout(0.2)(merge)
+        merge = Dense(25, activation="sigmoid")(merge)
+        merge = Dropout(0.2)(merge)
+        merge = Dense(10, activation="relu")(merge)
+        merge = Dropout(0.2)(merge)
+        merge = Dense(1, activation="sigmoid")(merge)
         model = Model(inputs=[time, regressor_processing], outputs=merge)
         model.compile(optimizer='adam', loss='mean_squared_error',
                       metrics=['accuracy'])
@@ -160,11 +176,20 @@ class TimeSeriesModels:
             if i % int(nb_epochs / 10) == 0:
                 print("computation at: ", int(100 * i / nb_epochs), "%")
                 print(history[i].history)
+        self.history = history
         self.model = model
 
     def plot_train_data(self):
         plt.plot(self.x_train[:, 0, 0])
         plt.show()
+
+    def show_training_history(self):
+        """
+        plots a graph of training history accross epoch. Will plot val_accuracy and val_loss if available.
+        :return: plots the graph.
+        """
+        hist = [i.history["loss"][0] for i in self.history]
+        plt.plot(hist)
 
 
 # frame a sequence as a supervised learning problem

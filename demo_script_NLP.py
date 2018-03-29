@@ -8,7 +8,7 @@ path_fasttext = r"C:\Users\gtregoat\workspace\deep_learning\fasttext\wiki.en.vec
 dir_path = r"C:\Users\gtregoat\Documents\databases\NLP_databases"
 
 data = pd.read_csv(dir_path + r"\amazon_review_polarity\train.csv",
-                        sep=',', lineterminator='\n', names=["label", "dummy", "text"])
+                   sep=',', lineterminator='\n', names=["label", "dummy", "text"])
 
 # Create an NLP model for data set 3
 test = nlp_models.NlpModels(x_train=data["text"].values, y_train=data["label"], test_size=0.50,

@@ -313,6 +313,13 @@ def tokenize(train, top_words, max_len, test=None):
 
 
 def load(folder_path):
+    """
+    Loads an NlpModels object saved in folder_path. The folder should contain 3 files: model.hdf5, params.p and
+        tokenizer.p.
+
+    :param folder_path: name of the folder containing the elements of the model.
+    :return: NlpModels object ready to use.
+    """
     params = pickle.load(open(folder_path + r"\params.p", "rb"))
     mod = NlpModels(x_train=[], y_train=[], x_test=[], y_test=[], task=params["task"],
                     top_words=params["top_words"], max_len=params["max_len"], bypass_to_categorical=True)
